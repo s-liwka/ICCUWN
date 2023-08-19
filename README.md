@@ -24,11 +24,11 @@ python -m venv ICCWUN-venv
 ```
 Linux:
 ```
-ICCWUN-venv/bin/activate
+ICCUWN-venv/bin/activate
 ```
 Windows:
 ```
-ICCWUN-venv/Scripts/activate.bat
+ICCUWN-venv/Scripts/activate.bat
 ```
 
 3. Install requirements
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 
 4. Run
 ```
-python iccwun.py
+python iccuwn.py
 ```
 
 ## Credits
