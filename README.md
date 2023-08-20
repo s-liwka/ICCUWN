@@ -20,7 +20,7 @@ cd ICCUWN
 
 Optional: Make a venv
 ```
-python -m venv ICCWUN-venv
+python -m venv ICCUWN-venv
 ```
 Linux:
 ```
