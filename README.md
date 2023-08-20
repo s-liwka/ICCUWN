@@ -8,7 +8,7 @@ All GUI's for yt-dlp i found were either broken or way too bloated for me. Also 
 
 ## Installation
 
-1. Install Python (3.11.4 works for me)
+1. Install Python (3.11.4 works for me) and ffmpeg
 
 2. Clone the Repo
 ```
