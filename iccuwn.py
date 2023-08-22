@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from CTkMessagebox import CTkMessagebox as msgbox
 import subprocess as sb
 from PIL import Image
 import os
@@ -9,6 +10,9 @@ import yt_dlp
 import asyncio
 import threading
 import requests
+import sys
+
+path_to_iccuwn = os.path.join(os.path.dirname(sys.argv[0]), os.path.basename(sys.argv[0]))
 
 home_dir = os.path.expanduser('~')
 
@@ -27,6 +31,8 @@ if not os.path.exists(config_file):
         os.makedirs(themes_dir)
     with open(config_file, 'w') as f:
         f.write('{')
+        f.write('\n\t"iccuwn_version": "a1.1",')
+        f.write('\n\t"update_notif": "True",')
         f.write(f'\n\t"default_output": "{home_dir}",')
         f.write('\n\t"default_format": "mp3",')
         f.write('\n\t"appearance": "system",')
@@ -43,6 +49,8 @@ def load_config(file_path):
 
 cfg = load_config(config_file)
 
+iccuwn_version = cfg['iccuwn_version']
+update_notif = cfg['update_notif']
 default_output_dir = cfg['default_output']
 default_format = cfg['default_format']
 appearance = cfg['appearance']
@@ -50,6 +58,41 @@ ctk_theme = cfg['ctk_theme']
 custom_ctk_theme = cfg['custom_ctk_theme']
 
 print(custom_ctk_theme)
+
+github_version = None
+outdated = False
+
+
+def check_for_updates():
+    global outdated
+    global github_version
+    check_version =  requests.get(r'https://raw.githubusercontent.com/s-liwka/ICCUWN/main/version')
+    if check_version.status_code == 200:
+        github_version = check_version.content.decode('utf-8')
+        if github_version == iccuwn_version:
+            return
+        else:
+            outdated = True
+
+
+def update_iccuwn():
+    latest_script = requests.get(r'https://raw.githubusercontent.com/s-liwka/ICCUWN/main/iccuwn.py')
+    if latest_script.status_code == 200:
+        with open(path_to_iccuwn, 'wb') as f:
+            f.write(latest_script.content)
+        exit()
+
+
+def update_msgbox():
+    global github_version
+    update_prompt = msgbox(title='Update', message=f'You are running an outdated version! ({iccuwn_version}) The latest version is {github_version}You may disable this prompt in settings.', option_1='Ignore', option_2='Update')
+
+    response = update_prompt.get()
+
+    if response == 'Update':
+        update_iccuwn()
+    else:
+        pass
 
 # download icons
 if not os.path.exists(os.path.join(config_dir, 'folder.png')):
@@ -90,6 +133,10 @@ def download_themes():
 if not os.path.exists(os.path.join(themes_dir, 'pink.json')):
     download_themes = threading.Thread(target=download_themes)
     download_themes.start()
+
+check_for_updates()
+#check_for_updates_thread = threading.Thread(target=check_for_updates)
+#check_for_updates_thread.start()
     
 
 settings_img = ctk.CTkImage(dark_image=Image.open(os.path.join(config_dir, 'settings.png')))
@@ -102,6 +149,11 @@ def extract_percentage(percent_str):
         return float(percent_match.group(1)) / 100.0
     return 0.0
 
+
+def yt_dlp_error(e):
+    msgbox(title="Error", message=f"YT-DLP Error: {e}", icon="cancel")
+
+
 # get video title
 async def get_video_title(url):
     ydl_opts = {
@@ -113,37 +165,42 @@ async def get_video_title(url):
         video_title = info_dict.get('title', 'Untitled')
         return video_title
 
-
 # download function
 async def download(url, output, resolution, Format):
-    video_title = await get_video_title(url)
-    output_mp4 = os.path.join(output, f"{video_title}.mp4")
-    if Format == 'mp4':
-        ydl_opts = {
-            'format': f"bestvideo[height<={resolution}][ext=mp4]+bestaudio[ext=m4a]/best[height<={resolution}][ext=mp4]/best",
-            'outtmpl': output_mp4,
-            'progress_hooks': [progress_hook],
-        }
+    try:
+        video_title = await get_video_title(url)
+        output_mp4 = os.path.join(output, f"{video_title}.mp4")
+        if Format == 'mp4':
+            ydl_opts = {
+                'format': f"bestvideo[height<={resolution}][ext=mp4]+bestaudio[ext=m4a]/best[height<={resolution}][ext=mp4]/best",
+                'outtmpl': output_mp4,
+                'progress_hooks': [progress_hook],
+            }
 
-    if Format == 'mp3':
-        ydl_opts = {
-            'format': 'worstvideo+bestaudio',
-            'merge_output_format': 'mp4',
-            'outtmpl': output_mp4,
-            'progress_hooks': [progress_hook],
-        }
+        if Format == 'mp3':
+            ydl_opts = {
+                'format': 'worstvideo+bestaudio',
+                'merge_output_format': 'mp4',
+                'outtmpl': output_mp4,
+                'progress_hooks': [progress_hook],
+            }
 
 
-    ydl = yt_dlp.YoutubeDL(ydl_opts)
-    await asyncio.to_thread(ydl.download, [url])
-    print('finished')
+        ydl = yt_dlp.YoutubeDL(ydl_opts)
+        await asyncio.to_thread(ydl.download, [url])
+        print('finished')
+            
 
-    if Format == 'mp3':
-        precentage_label.configure(text="Converting to mp3...")
-        to_mp3 = sb.Popen(['ffmpeg', '-i', output_mp4, '-c:a', 'libmp3lame', '-q:a', '0', '-y', f"{os.path.join(output, video_title)}.mp3"])
-        to_mp3.wait()
-        precentage_label.configure(text="Finished")
-        os.remove(output_mp4)
+        if Format == 'mp3':
+            precentage_label.configure(text="Converting to mp3...")
+            to_mp3 = sb.Popen(['ffmpeg', '-i', output_mp4, '-c:a', 'libmp3lame', '-q:a', '0', '-y', f"{os.path.join(output, video_title)}.mp3"])
+            to_mp3.wait()
+            precentage_label.configure(text="Finished")
+            os.remove(output_mp4)
+        
+    except Exception as e:
+        yt_dlp_error(e)
+
 
 mem_precent_value = 0.0
 
@@ -245,11 +302,13 @@ def open_settings():
 
         def save_settings():
             global config_file
+            print('wiowiow')
             cfg["default_output"] = default_output_folder_entry.get()
             cfg["default_format"] = default_format_menu.get()
             cfg["appearance"] = appearance_menu.get().lower()
             cfg["ctk_theme"] = ctk_theme_menu.get().lower()
             cfg["custom_ctk_theme"] = ctk_theme_entry.get()
+            cfg["update_notif"] = update_prompt_checkbox.get()
 
             if cfg["ctk_theme"] == 'dark blue':
                 cfg["ctk_theme"] = 'dark-blue'
@@ -261,21 +320,16 @@ def open_settings():
                 cfg["custom_ctk_theme"] = os.path.join(themes_dir, 'pink.json')
             elif cfg["ctk_theme"] == 'marsh':
                 cfg["custom_ctk_theme"] = os.path.join(themes_dir, 'marsh.json')
+            
+            if cfg['update_notif'] == 1:
+                cfg['update_notif'] = 'True'
+            elif cfg['update_notif'] == 0:
+                cfg['update_notif'] = 'False'
 
-
+            
             with open(config_file, 'w') as f:
                 json.dump(cfg, f, indent=4)
                 pass
-
-
-            reload_cfg = load_config(config_file)
-
-            default_output_dir = reload_cfg['default_output']
-            default_format = reload_cfg['default_format']
-            appearance = reload_cfg['appearance']
-            ctk_theme = reload_cfg['ctk_theme']
-            custom_ctk_theme = reload_cfg['custom_ctk_theme']
-
 
         def file_dialog_default_output():
             file_path = ctk.filedialog.askdirectory()
@@ -289,10 +343,11 @@ def open_settings():
                 ctk_theme_entry.delete(0, ctk.END)
                 ctk_theme_entry.insert(0, file_path)
 
+
         settings_window = ctk.CTkToplevel(app)
         settings_window.title('ICCUWN Settings')
         settings_window.resizable(False, False)
-        settings_window.geometry("320x420")
+        settings_window.geometry("320x480")
 
         # define widgets
         default_output_text = ctk.CTkLabel(settings_window, text='Default Output Folder')
@@ -308,6 +363,9 @@ def open_settings():
         ctk_theme_menu = ctk.CTkOptionMenu(settings_window, values=['Blue', 'Dark Blue', 'Green', 'Custom'])
         ctk_theme_entry = ctk.CTkEntry(settings_window, placeholder_text='Path to custom CTk Theme', width=200)
         ctk_theme_picker = ctk.CTkButton(settings_window, text="", image=folder_img, width=32, height=32, command=file_dialog_ctk)
+
+        update_prompt_label = ctk.CTkLabel(settings_window, text="Update Prompt On Start")
+        update_prompt_checkbox = ctk.CTkCheckBox(settings_window, text="Enable")
 
         save_settings_button = ctk.CTkButton(settings_window, text="Save", command=save_settings)
 
@@ -344,24 +402,31 @@ def open_settings():
             ctk_theme_menu = ctk.CTkOptionMenu(settings_window, values=['Pink', 'Blue', 'Dark Blue', 'Green', 'Red', 'Yellow', 'Marsh', 'Custom'])
         elif ctk_theme == 'marsh':
             ctk_theme_menu = ctk.CTkOptionMenu(settings_window, values=['Marsh', 'Blue', 'Dark Blue', 'Green', 'Red', 'Yellow', 'Pink', 'Custom'])
-               
+        
+        if update_notif == 'True':
+            update_prompt_checkbox.select()
+        elif update_notif == 'False':
+            update_prompt_checkbox.deselect()               
 
 
         #place widgets
         default_output_text.place(relx=0.5, rely=0.04, anchor=ctk.CENTER)
-        default_output_folder_entry.place(relx=0.5, rely=0.12, anchor=ctk.CENTER)
-        default_output_folder_picker_button.place(relx=0.9, rely=0.12, anchor=ctk.CENTER)
+        default_output_folder_entry.place(relx=0.5, rely=0.1, anchor=ctk.CENTER)
+        default_output_folder_picker_button.place(relx=0.9, rely=0.1, anchor=ctk.CENTER)
 
-        default_format_text.place(relx=0.5, rely=0.22, anchor=ctk.CENTER)
-        default_format_menu.place(relx=0.5, rely=0.3, anchor=ctk.CENTER)
+        default_format_text.place(relx=0.5, rely=0.18, anchor=ctk.CENTER)
+        default_format_menu.place(relx=0.5, rely=0.24, anchor=ctk.CENTER)
 
-        appearance_text.place(relx=0.5, rely=0.4, anchor=ctk.CENTER)
-        appearance_menu.place(relx=0.5, rely=0.48, anchor=ctk.CENTER)
+        appearance_text.place(relx=0.5, rely=0.32, anchor=ctk.CENTER)
+        appearance_menu.place(relx=0.5, rely=0.38, anchor=ctk.CENTER)
 
-        ctk_theme_text.place(relx=0.5, rely=0.58, anchor=ctk.CENTER)
-        ctk_theme_menu.place(relx=0.5, rely=0.66, anchor=ctk.CENTER)
-        ctk_theme_entry.place(relx=0.5, rely=0.76, anchor=ctk.CENTER)
-        ctk_theme_picker.place(relx=0.9, rely=0.76, anchor=ctk.CENTER)
+        ctk_theme_text.place(relx=0.5, rely=0.46, anchor=ctk.CENTER)
+        ctk_theme_menu.place(relx=0.5, rely=0.52, anchor=ctk.CENTER)
+        ctk_theme_entry.place(relx=0.5, rely=0.6, anchor=ctk.CENTER)
+        ctk_theme_picker.place(relx=0.9, rely=0.6, anchor=ctk.CENTER)
+
+        update_prompt_label.place(relx=0.5, rely=0.68, anchor=ctk.CENTER)
+        update_prompt_checkbox.place(relx=0.535, rely=0.74, anchor=ctk.CENTER)
 
         save_settings_button.place(relx=0.5, rely=0.92, anchor=ctk.CENTER)
         
@@ -427,5 +492,8 @@ settings_button.place(relx=0.92, rely=0.87, anchor=ctk.CENTER)
 output_folder_entry.place(relx=0.22, rely=0.87, anchor=ctk.CENTER)
 output_folder_picker_button.place(relx=0.42, rely=0.87, anchor=ctk.CENTER)
 default_output_button.place(relx=0.145, rely=0.77, anchor=ctk.CENTER)
+
+if outdated and update_notif == 'True':
+    update_msgbox()
 
 app.mainloop()
