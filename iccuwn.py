@@ -23,8 +23,9 @@ config_file = os.path.join(config_dir, 'config.json')
 if not os.path.exists(config_file):
     if platform.system() == 'Windows':
         sb.run(['type', config_file])
-    os.makedirs(config_dir)
-    os.makedirs(themes_dir)
+    if not os.path.exists(config_dir):    
+        os.makedirs(config_dir)
+        os.makedirs(themes_dir)
     with open(config_file, 'w') as f:
         f.write('{')
         f.write(f'\n\t"default_output": "{home_dir}",')
