@@ -7,6 +7,8 @@ ICCUWN (I Couldn't Come Up With a Name) is a minimalistic, simple and open sourc
 All GUI's for yt-dlp i found were either broken or way too bloated for me. Also I wanted to get some experience with GUI's (and got some with asynchronous programming on the way too).
 ## Installation (Automatic)
 
+### YOU STILL NEED TO INSTALL PYTHON AND FFMPEG MANUALLY
+
 Windows:
 
 https://raw.githubusercontent.com/s-liwka/ICCUWN/main/WindowsInstaller/install.bat
