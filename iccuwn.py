@@ -16,6 +16,7 @@ if platform.system() == 'Linux':
     config_dir = os.path.join(home_dir, '.config', 'ICCUWN')
 else:
     config_dir = os.path.join(os.getenv('LOCALAPPDATA'), 'ICCUWN')
+    home_dir = home_dir.replace('\\', '\\\\')
 
 themes_dir = os.path.join(config_dir, 'themes')
 config_file = os.path.join(config_dir, 'config.json')
