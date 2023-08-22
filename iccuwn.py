@@ -21,8 +21,6 @@ themes_dir = os.path.join(config_dir, 'themes')
 config_file = os.path.join(config_dir, 'config.json')
 
 if not os.path.exists(config_file):
-    if platform.system() == 'Windows':
-        sb.run(['type', config_file])
     if not os.path.exists(config_dir):    
         os.makedirs(config_dir)
         os.makedirs(themes_dir)
