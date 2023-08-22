@@ -1,2 +1,2 @@
 %localappdata%\ICCUWN\iccuwn-venv\Scripts\activate.bat
-python %localappdata%\ICCUWN\iccuwn.py
+pythonw %localappdata%\ICCUWN\iccuwn.py
