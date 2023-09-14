@@ -1,4 +1,7 @@
 # ICCUWN
+
+## ABANDONED -- IM NOW USING PARABOLIC
+
 ICCUWN (I Couldn't Come Up With a Name) is a minimalistic, simple and open source GUI for yt-dlp.
 
 ![Alt Text](https://github.com/s-liwka/ICCUWN/blob/main/images/screenshot1.png?raw=true)
